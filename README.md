@@ -1,18 +1,15 @@
-# create-svelte
+# a11y-list
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+An accessible, dynamic list example.
 
-## Creating a project
+### Intended behaviour:
 
-If you're seeing this, you've probably already done this step. Congrats!
+- On an item deletion, the item is being soft deleted with a refocus and its content being swapped to context info, "Deleted". Navigation decision is left with a user, after the context dummy is abandoned (navigation away) the item is being deleted permanently.
+- On a deletion of the last item, permanent deletion is executed, and focus switches to a list-wide context info, "List is empty".
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+#### Alternative options:
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+- On an item deletion, focus could be switched to a different item on the list, e.g. previous, next, whichever ["preserves meaning and operability"](https://www.w3.org/TR/WCAG21/#focus-order).
 
 ## Developing
 
@@ -34,5 +31,3 @@ npm run build
 ```
 
 You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
