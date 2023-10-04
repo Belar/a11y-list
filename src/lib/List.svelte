@@ -1,3 +1,10 @@
+<script lang="ts" context="module">
+	export type Entry = {
+		name: string;
+		isDeleted?: boolean;
+	};
+</script>
+
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Button from './Button.svelte';
@@ -5,11 +12,12 @@
 	import { getFocusableElements } from './element';
 	import { isBackKeyboardNavigation, isForwardKeyboardNavigation, isKeyPress } from './key';
 
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher<{
+		delete: Entry;
+		deleteClear: null;
+	}>();
 
-	type Entry = {
-		name: string;
-	};
+	const ITEM_DELETED_PLACEHOLDER = '<Deleted>';
 
 	export let list: Entry[] = [];
 	let itemRefs: HTMLElement[] = [];
@@ -18,18 +26,21 @@
 
 	$: hasRecords = !!list.length;
 
-	function handleInitialDelete(event: MouseEvent | KeyboardEvent, entry: Entry) {
+	async function handleInitialDelete(event: MouseEvent | KeyboardEvent, entry: Entry) {
 		if (!isKeyPress(event)) {
 			dispatchDelete(entry);
+			await tick();
+			dispatchDeleteCleanUp();
 			return;
 		}
 
 		if (event.target instanceof Element) {
 			softDeleteHolderElement = event.target?.parentElement;
+			dispatchDelete(entry);
 
 			const isTheLastElement = list.length === 1;
 			if (isTheLastElement) {
-				dispatchDelete(entry);
+				dispatchDeleteCleanUp();
 				return;
 			}
 
@@ -37,7 +48,7 @@
 		}
 	}
 
-	function handleContextFocus(entry: Entry, { nextItem }: { nextItem?: HTMLElement } = {}) {
+	function handleContextFocus({ nextItem }: { nextItem?: HTMLElement } = {}) {
 		softDeleteHolderElement?.addEventListener('keydown', (event) => {
 			const isForwardNav = isForwardKeyboardNavigation(event);
 			const isBackNav = isBackKeyboardNavigation(event);
@@ -48,20 +59,23 @@
 					nextFocusableElement.focus();
 				}
 
-				dispatchDelete(entry);
+				dispatchDeleteCleanUp();
 			}
 		});
 	}
 
 	async function dispatchDelete(entry: Entry) {
+		dispatch('delete', entry);
+	}
+
+	async function dispatchDeleteCleanUp() {
 		softDeleteHolderElement = null;
 
-		dispatch('delete', entry);
+		dispatch('deleteClear');
 
 		await tick();
 		if (!hasRecords) {
 			emptyListRef?.focus();
-			return;
 		}
 	}
 </script>
@@ -69,14 +83,14 @@
 {#if hasRecords}
 	<ul>
 		{#each list as entry, i}
-			{@const { name } = entry}
+			{@const { name, isDeleted } = entry}
 			<li
 				tabindex="-1"
 				bind:this={itemRefs[i]}
-				on:focus={() => handleContextFocus(entry, { nextItem: itemRefs[i++] })}
+				on:focus={() => handleContextFocus({ nextItem: itemRefs[i++] })}
 			>
-				{#if itemRefs[i] === softDeleteHolderElement}
-					Deleted
+				{#if isDeleted}
+					{ITEM_DELETED_PLACEHOLDER}
 				{:else}
 					{name}
 					<Button on:click={(event) => handleInitialDelete(event, entry)}>Delete</Button>
